@@ -315,3 +315,54 @@
     (ok (len (get categories file-info)))
   )
 )
+
+
+;; ========== ACCESS MANAGEMENT FUNCTIONS ==========
+
+;; Verifies if a user has access to a specific file
+(define-public (verify-access (file-id uint) (viewer-principal principal))
+  (let
+    (
+      (access-info (unwrap! (map-get? viewing-rights { file-id: file-id, viewer-principal: viewer-principal }) ACCESS_VIOLATION))
+    )
+    (ok (get access-enabled access-info))
+  )
+)
+
+;; Alternative access check functions (these perform the same validation with different names)
+(define-public (check-viewer-access (file-id uint) (viewer-principal principal))
+  (let
+    (
+      (access-info (unwrap! (map-get? viewing-rights { file-id: file-id, viewer-principal: viewer-principal }) ACCESS_VIOLATION))
+    )
+    (ok (get access-enabled access-info))
+  )
+)
+
+
+(define-public (get-access-status (file-id uint) (viewer-principal principal))
+  (let
+    (
+      (access-info (unwrap! (map-get? viewing-rights { file-id: file-id, viewer-principal: viewer-principal }) ACCESS_VIOLATION))
+    )
+    (ok (get access-enabled access-info))
+  )
+)
+
+(define-public (has-viewing-permission (file-id uint) (viewer-principal principal))
+  (let
+    (
+      (access-info (unwrap! (map-get? viewing-rights { file-id: file-id, viewer-principal: viewer-principal }) ACCESS_VIOLATION))
+    )
+    (ok (get access-enabled access-info))
+  )
+)
+
+(define-public (is-viewer-authorized (file-id uint) (viewer-principal principal))
+  (let
+    (
+      (access-info (unwrap! (map-get? viewing-rights { file-id: file-id, viewer-principal: viewer-principal }) ACCESS_VIOLATION))
+    )
+    (ok (get access-enabled access-info))
+  )
+)
