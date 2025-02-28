@@ -169,3 +169,75 @@
     (ok true)
   )
 )
+
+;; Removes a file from the system
+(define-public (remove-file (file-id uint))
+  (let
+    (
+      (file-info (unwrap! (map-get? health-files { file-id: file-id }) NOT_FOUND_ERROR))
+    )
+    ;; Validation
+    (asserts! (file-exists? file-id) NOT_FOUND_ERROR)
+    (asserts! (is-eq (get provider-principal file-info) tx-sender) AUTH_FAILURE)
+
+    ;; Remove file and access records
+    (map-delete health-files { file-id: file-id })
+    (map-delete viewing-rights { file-id: file-id, viewer-principal: tx-sender })
+    (ok true)
+  )
+)
+
+;; Changes the provider associated with a file
+(define-public (transfer-ownership (file-id uint) (new-provider principal))
+  (let
+    (
+      (file-info (unwrap! (map-get? health-files { file-id: file-id }) NOT_FOUND_ERROR))
+    )
+    ;; Validation
+    (asserts! (file-exists? file-id) NOT_FOUND_ERROR)
+    (asserts! (is-eq (get provider-principal file-info) tx-sender) AUTH_FAILURE)
+
+    ;; Update provider information
+    (map-set health-files
+      { file-id: file-id }
+      (merge file-info { provider-principal: new-provider })
+    )
+    (ok true)
+  )
+)
+
+;; Authorizes a user to access a specific file
+(define-public (authorize-access 
+  (file-id uint)               
+  (viewer principal)           
+)
+  (let
+    (
+      (file-info (unwrap! (map-get? health-files { file-id: file-id }) NOT_FOUND_ERROR))
+    )
+    ;; Validation
+    (asserts! (file-exists? file-id) NOT_FOUND_ERROR)
+    (asserts! (is-eq (get provider-principal file-info) tx-sender) AUTH_FAILURE)
+    (asserts! (is-authorized-viewer? viewer) ACCESS_VIOLATION)
+
+    ;; Grant access permission
+    (map-insert viewing-rights
+      { file-id: file-id, viewer-principal: viewer }
+      { access-enabled: true }
+    )
+    (ok true)
+  )
+)
+
+;; ========== INFORMATION RETRIEVAL FUNCTIONS ==========
+
+;; Retrieves complete file information
+(define-public (get-file-details (file-id uint))
+  (let
+    (
+      (file-info (unwrap! (map-get? health-files { file-id: file-id }) NOT_FOUND_ERROR))
+    )
+    (ok file-info)
+  )
+)
+
