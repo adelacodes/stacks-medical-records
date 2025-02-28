@@ -43,3 +43,129 @@
 (define-private (file-exists? (file-id uint))
   (is-some (map-get? health-files { file-id: file-id }))
 )
+
+;; Confirms provider ownership of a file
+(define-private (provider-owns-file? (file-id uint) (provider principal))
+  (match (map-get? health-files { file-id: file-id })
+    file-info (is-eq (get provider-principal file-info) provider)
+    false
+  )
+)
+
+;; Retrieves file size information
+(define-private (file-volume (file-id uint))
+  (default-to u0
+    (get content-volume
+      (map-get? health-files { file-id: file-id })
+    )
+  )
+)
+
+;; Validates single category formatting
+(define-private (is-valid-category (category (string-ascii 32)))
+  (and 
+    (> (len category) u0)
+    (< (len category) u33)
+  )
+)
+
+;; Validates the entire category set
+(define-private (validate-category-set (categories (list 10 (string-ascii 32))))
+  (and
+    (> (len categories) u0)  ;; At least one category required
+    (<= (len categories) u10) ;; Maximum 10 categories allowed
+    (is-eq (len (filter is-valid-category categories)) (len categories)) ;; All categories must pass validation
+  )
+)
+
+;; User validation helper
+(define-private (is-authorized-viewer? (viewer principal))
+  (or
+    (is-eq viewer system-admin) ;; System admin always has access
+    ;; Additional authorization logic could be added here
+  )
+)
+
+;; ========== FILE MANAGEMENT FUNCTIONS ==========
+
+;; Creates a new medical file in the system
+(define-public (create-file 
+  (subject-identifier (string-ascii 64))       ;; Patient identifier
+  (content-volume uint)                        ;; Size of file in bytes
+  (clinical-summary (string-ascii 128))        ;; Clinical notes
+  (categories (list 10 (string-ascii 32)))     ;; Classification categories
+)
+  (let
+    (
+      (file-id (+ (var-get records-count) u1))  ;; Generate sequential ID
+    )
+    ;; Input validation
+    (asserts! (> (len subject-identifier) u0) IDENTIFIER_ERROR)
+    (asserts! (< (len subject-identifier) u65) IDENTIFIER_ERROR)
+    (asserts! (> content-volume u0) VOLUME_ERROR)
+    (asserts! (< content-volume u1000000000) VOLUME_ERROR)
+    (asserts! (> (len clinical-summary) u0) IDENTIFIER_ERROR)
+    (asserts! (< (len clinical-summary) u129) IDENTIFIER_ERROR)
+    (asserts! (validate-category-set categories) CATEGORY_ERROR)
+
+    ;; Store the file metadata
+    (map-insert health-files
+      { file-id: file-id }
+      {
+        subject-identifier: subject-identifier,
+        provider-principal: tx-sender,
+        content-volume: content-volume,
+        timestamp-block: block-height,
+        clinical-summary: clinical-summary,
+        categories: categories
+      }
+    )
+
+    ;; Grant access to file creator
+    (map-insert viewing-rights
+      { file-id: file-id, viewer-principal: tx-sender }
+      { access-enabled: true }
+    )
+
+    ;; Update system records
+    (var-set records-count file-id)
+    (ok file-id)
+  )
+)
+
+;; Updates an existing file with new information
+(define-public (modify-file 
+  (file-id uint)                             ;; Target file ID
+  (new-subject-identifier (string-ascii 64)) ;; Updated patient identifier
+  (new-volume uint)                          ;; Updated size
+  (new-summary (string-ascii 128))           ;; Updated clinical notes
+  (new-categories (list 10 (string-ascii 32))) ;; Updated categories
+)
+  (let
+    (
+      (file-info (unwrap! (map-get? health-files { file-id: file-id }) NOT_FOUND_ERROR))
+    )
+    ;; Validation checks
+    (asserts! (file-exists? file-id) NOT_FOUND_ERROR)
+    (asserts! (is-eq (get provider-principal file-info) tx-sender) AUTH_FAILURE)
+    (asserts! (> (len new-subject-identifier) u0) IDENTIFIER_ERROR)
+    (asserts! (< (len new-subject-identifier) u65) IDENTIFIER_ERROR)
+    (asserts! (> new-volume u0) VOLUME_ERROR)
+    (asserts! (< new-volume u1000000000) VOLUME_ERROR)
+    (asserts! (> (len new-summary) u0) IDENTIFIER_ERROR)
+    (asserts! (< (len new-summary) u129) IDENTIFIER_ERROR)
+    (asserts! (validate-category-set new-categories) CATEGORY_ERROR)
+
+    ;; Update file metadata
+    (map-set health-files
+      { file-id: file-id }
+      (merge file-info { 
+        subject-identifier: new-subject-identifier, 
+        content-volume: new-volume, 
+        clinical-summary: new-summary, 
+        categories: new-categories 
+      })
+    )
+    (ok true)
+  )
+)
