@@ -241,3 +241,77 @@
   )
 )
 
+;; Gets system statistics
+(define-public (get-system-stats)
+  (ok (var-get records-count))
+)
+
+;; Retrieves subject identifier from file
+(define-public (get-subject-id (file-id uint))
+  (let
+    (
+      (file-info (unwrap! (map-get? health-files { file-id: file-id }) NOT_FOUND_ERROR))
+    )
+    (ok (get subject-identifier file-info))
+  )
+)
+
+;; Retrieves provider information for file
+(define-public (get-file-provider (file-id uint))
+  (let
+    (
+      (file-info (unwrap! (map-get? health-files { file-id: file-id }) NOT_FOUND_ERROR))
+    )
+    (ok (get provider-principal file-info))
+  )
+)
+
+;; Retrieves file creation timestamp
+(define-public (get-file-timestamp (file-id uint))
+  (let
+    (
+      (file-info (unwrap! (map-get? health-files { file-id: file-id }) NOT_FOUND_ERROR))
+    )
+    (ok (get timestamp-block file-info))
+  )
+)
+
+;; Retrieves file size information
+(define-public (get-file-size (file-id uint))
+  (let
+    (
+      (file-info (unwrap! (map-get? health-files { file-id: file-id }) NOT_FOUND_ERROR))
+    )
+    (ok (get content-volume file-info))
+  )
+)
+
+;; Retrieves file clinical summary
+(define-public (get-file-summary (file-id uint))
+  (let
+    (
+      (file-info (unwrap! (map-get? health-files { file-id: file-id }) NOT_FOUND_ERROR))
+    )
+    (ok (get clinical-summary file-info))
+  )
+)
+
+;; Retrieves all categories for a file
+(define-public (get-file-categories (file-id uint))
+  (let
+    (
+      (file-info (unwrap! (map-get? health-files { file-id: file-id }) NOT_FOUND_ERROR))
+    )
+    (ok (get categories file-info))
+  )
+)
+
+;; Counts the number of categories for a file
+(define-public (count-file-categories (file-id uint))
+  (let
+    (
+      (file-info (unwrap! (map-get? health-files { file-id: file-id }) NOT_FOUND_ERROR))
+    )
+    (ok (len (get categories file-info)))
+  )
+)
